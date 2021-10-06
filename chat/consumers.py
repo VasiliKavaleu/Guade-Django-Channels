@@ -7,6 +7,9 @@ from channels.generic.websocket import (
 from channels.consumer import SyncConsumer
 from channels.exceptions import StopConsumer
 from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
+
+from chat.models import Online
 
 
 # scope аналог словарю request во view - в котором содержится вся инфа запроса
@@ -64,11 +67,14 @@ class SyncChatConsumer(WebsocketConsumer):
 
 class AsyncChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        # await database_sync_to_async(self.create_online())() # если использовать без декоратора
+        await self.create_online()
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept() 
     
     async def disconnect(self, code):
+        await self.delete_online()
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -82,6 +88,15 @@ class AsyncChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         await self.send(text_data=event["text"])
+
+    @database_sync_to_async
+    def create_online(self):
+        new, _ = Online.objects.get_or_create(name=self.channel_name)
+
+    @database_sync_to_async
+    def delete_online(self):
+        Online.objects.create.filter(name=self.channel_name).delete()
+
 
 
 
