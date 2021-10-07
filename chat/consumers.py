@@ -8,6 +8,8 @@ from channels.consumer import SyncConsumer
 from channels.exceptions import StopConsumer
 from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
+from channels.auth import login, logout
+from django.contrib.auth import get_user_model
 
 from chat.models import Online
 
@@ -42,6 +44,9 @@ from chat.models import Online
 class SyncChatConsumer(WebsocketConsumer):
     """Пример использованиея channel_layer в синхронном консьюмере"""
     def connect(self):
+        # async_to_sync(login)(self.scope, user) # пример логина юзера, где user - объект User для авторизации
+        # async_to_sync(logout)(self.scope)
+        # self.scope['session'].save()
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"] # получаем имя чата из url
         # добавляемся в группу с именем self.room_name
         async_to_sync(self.channel_layer.group_add)(self.room_name, self.channel_name) # уникальное имя канала с определенным поьзователем записывается в self.channel_name
@@ -67,22 +72,35 @@ class SyncChatConsumer(WebsocketConsumer):
 
 class AsyncChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        print(self.scope['user'])
         # await database_sync_to_async(self.create_online())() # если использовать без декоратора
         await self.create_online()
+
+        # user = await self.get_user_from_db()
+        # await login(self.scope, user) # залогиниться
+        # await database_sync_to_async(self.scope['session'].save)()
+
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         await self.channel_layer.group_add(self.room_name, self.channel_name)
+        self.scope['session']['my_var'] = "I am from session!" # для записи в сессию в рамах текущего подключения
+        await database_sync_to_async(self.scope['session'].save)()
         await self.accept() 
     
     async def disconnect(self, code):
-        await self.delete_online()
+         
+        # await logout(self.scope)  # разлогиниться
+        # await database_sync_to_async(self.scope['session'].save)()
+
+        await self.delete_online() # не отработает в случае разрыва соединения не disconnect
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
+        await self.refresh_onlie() # для обновления сущности из базы т.к. в рамках одного подключения полученные один раз данные не обновляюся
         await self.channel_layer.group_send(  
             self.room_name, 
             {
                 "type": "chat.message",
-                "text": text_data  
+                "text": f"{text_data} from {self.online.name} and with session key: {self.scope['session']['my_var']}"
             }                           
         )
 
@@ -92,10 +110,19 @@ class AsyncChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def create_online(self):
         new, _ = Online.objects.get_or_create(name=self.channel_name)
+        self.online = new # self.online можем использовать в других частях консьюмера
 
     @database_sync_to_async
     def delete_online(self):
-        Online.objects.create.filter(name=self.channel_name).delete()
+        Online.objects.filter(name=self.channel_name).delete()
+
+    @database_sync_to_async
+    def refresh_onlie(self):
+        self.online.refresh_from_db()
+
+    @database_sync_to_async
+    def get_user_from_db(self):
+        return get_user_model().objects.filter(name="admin").first()
 
 
 

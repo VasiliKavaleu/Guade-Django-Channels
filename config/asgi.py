@@ -11,15 +11,19 @@ import os
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
+from channels.sessions import SessionMiddlewareStack # для подключения сессий SessionMiddlewareStack = CookieMiddleware + SessionMiddleware т.е. CookieMiddleware(SessionMiddleware())
+from channels.auth import AuthMiddlewareStack # для подключения авторизации AuthMiddlewareStack = CookieMiddleware + SessionMiddleware + AuthMiddleware
 
 from chat.routing import websocket_urls
+from chat.middleware import SimpleMiddlewareStack # custom middleware SimpleMiddlewareStack = AuthMiddlewareStack + SimpleMiddleware
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 application = ProtocolTypeRouter({
-    #"http": get_asgi_application(),
-    "websocket": URLRouter(
-        websocket_urls,
+    "http": get_asgi_application(),
+    "websocket": SimpleMiddlewareStack(
+        URLRouter(
+            websocket_urls,
+        )
     )
-    # Just HTTP for now. (We can add other protocols later.)
 })
