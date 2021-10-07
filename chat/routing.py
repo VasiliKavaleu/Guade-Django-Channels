@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .consumers import (
+from .test_consumers import (
     ChatConsumer, AsyncChatConsumer, BaseSyncConsumer, BaseAsyncConsumer, ChatJsonConsumer,
     SyncChatConsumer
 )
