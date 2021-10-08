@@ -9,6 +9,23 @@ class GroupChatConsumer(BaseChatConsumer):
     """
     Connect to: ws://127.0.0.1:8000/ws/groups/
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.channel = None 
+
+    async def connect(self):                                        
+        await super().connect()
+
+        self.channel = ChatGroup.user_channel_name(self.scope['user'].id)
+        await self.channel_layer.group_add(self.channel, self.channel_name) # создаем отдельный канал для отправки уведомлений о сообщениях в группе в которую юзер добавлен
+
+    async def disconnect(self, code):
+        await self.channel_layer.group_discard(self.channel, self.channel_name) # закрываем отдельный канал для отправки уведомлений
+        await super().disconnect(code)
+
+    async def send_notice(self, event):
+        await self._send_message(event['data']['data'], event=event['data']['event'])
+
     async def event_group_list(self, event):
         """
         List all groups of current user

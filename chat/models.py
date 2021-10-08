@@ -26,6 +26,10 @@ class ChatGroup(models.Model):
     def channel_name(cls, group_id):
         return f"group_{group_id}"
 
+    @classmethod
+    def user_channel_name(cls, user_id):
+        return f"user_{user_id}"
+
 
 class GroupParticipant(models.Model):
     user = models.ForeignKey(get_user_model(), related_name='group_user',
