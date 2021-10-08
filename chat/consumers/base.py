@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 class BaseChatConsumer(AsyncJsonWebsocketConsumer):
     async def _group_send(self, data, event=None):
-        data = {"type": "respone.proxy", "data": data, "event": event}
+        data = {"type": "response.proxy", "data": data, "event": event}
         await self.channel_layer.group_send(self.channel, data)
 
     async def response_proxy(self, event):
@@ -25,6 +25,7 @@ class BaseChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         await self.accept()
+        print(self.scope["user"])
         if "user" not in self.scope or self.scope["user"].is_anonymous:
             await self._send_message({"detail": "Authorization failed"})
             await self.close(code=1000)
@@ -38,7 +39,7 @@ class BaseChatConsumer(AsyncJsonWebsocketConsumer):
             await method(message)
         else:
             await self._throw_error({"detail": "Invalid message"})
-        
+
 
     async def method_undefined(self, message):
         await self._throw_error({'detail': 'Unknown event'}, event=message['event'])

@@ -6,15 +6,20 @@ from .base import BaseChatConsumer
 
 
 class ChatConsumer(BaseChatConsumer):
+    """
+        Connect to group: ws://127.0.0.1:8000/ws/chat/group_id/
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_id = self.scope['kwargs']['group_id']            # получение id группы из websocket url
+        self.group_id = None
         self.group = None
         self.participants = []
-        self.channel = f"group_{self.group_id}"                     # идентификатор группы в формате в соответствии с channel_name из models
+        self.channel = None                    
 
     async def connect(self):                                        # обрабатываем подключение
         await super().connect()
+        self.group_id = self.scope['url_route']['kwargs']['group_id']            # получение id группы из websocket url
+        self.channel = f"group_{self.group_id}"                     # идентификатор группы в формате в соответствии с channel_name из models
 
         group = await self.get_group()                              # получение группы с id = self.group_id из init
         if not group:                                               # проверка существует ли группа 
@@ -22,7 +27,7 @@ class ChatConsumer(BaseChatConsumer):
             await self.close()                                      # разрываем соединение
             return
 
-        participants = self.get_participants()                      # получение всех участников группы с id = self.group_id из init
+        participants = await self.get_participants()                      # получение всех участников группы с id = self.group_id из init
         if self.scope['user'].id not in participants:               # проверка на вхождение у частника в группу
             await self._throw_error({'detail': 'Access denied'}) 
             await self.close()
@@ -36,13 +41,20 @@ class ChatConsumer(BaseChatConsumer):
         await super().disconnect(code)
 
     async def event_add_participant(self, event):
+        """
+            Add participant in current group: {"event":"add.participant","data":{"user_id":2}}
+        """
         user_id = event['data'].get('user_id')
         if not user_id:
             return await self._throw_error({'detail': 'Missing user id'}, event['event'])
-        participants = self.add_participant(user_id)
+        await self.add_participant(user_id)
+        participants = await self.get_participants()
         return await self._send_message(participants, event=event['event'])
 
     async def event_send_message(self, event):
+        """
+            Send message to current group: {"event":"send.message","data":{"message":"Good morning there"}}
+        """
         message = event['data'].get('message')
         if not message:
             return await self._throw_error({'detail': 'Missing message'}, event['event'])
@@ -76,8 +88,6 @@ class ChatConsumer(BaseChatConsumer):
         user = get_user_model().objects.filter(pk=user_id).first()
         if user:
             participant, _ = GroupParticipant.objects.get_or_create(group=self.group, user=user)
-        participants = self.get_participants()
-        return participants
 
     @database_sync_to_async
     def save_message(self, message, user):
