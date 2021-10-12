@@ -13,8 +13,8 @@ def new_group(sender, instance, created, **kwargs):
         # проверка не является ли создатель группы первым пользователем, т.к. нет необходимости уведомлять его о добавлении самого себя в группу
         first_participant = GroupParticipant.objects.filter(group=instance.group).order_by('-id').first()
         if first_participant.user.id != instance.user.id:
-           data = {
-               "type": "send.notice", # название метода который будет полусать из channel_layers данные и отправлять пользователю
+            data = {
+                "type": "send.notice", # название метода который будет полусать из channel_layers данные и отправлять пользователю
                 "data": {
                     "event": "new.group",
                     "data": {
@@ -23,10 +23,10 @@ def new_group(sender, instance, created, **kwargs):
                         "link": instance.group.link,
                     }
                 }
-           }
+            }
 
-        channel_name = ChatGroup.user_channel_name(instance.user.id) # имя канала в который необходимо отправить данные - data
-        send_chat_message(data, channel_name) # отправка сообщения когда в группу добавлен пользователь
+            channel_name = ChatGroup.user_channel_name(instance.user.id) # имя канала в который необходимо отправить данные - data
+            send_chat_message(data, channel_name) # отправка сообщения когда в группу добавлен пользователь
 
 def new_message(sender, instance, created, **kwargs):
     if created:

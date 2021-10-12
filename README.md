@@ -32,11 +32,14 @@ Run server and leave comment under post (login is required)
 ```bash
 python3 manage.py runserver
 ```
+Go to the main main page (login required):
+[chat](http://127.0.0.1:8000/)
 
 Connect to:
 ```
 ws://127.0.0.1:8000/ws/groups/
 ```
+And send messages
 
 List all groups of current user:
 ```
@@ -53,10 +56,13 @@ Create a group and add current user in it:
 {"event":"group.create","data":{"name":"Name Group1"}}
 ```
 
+Disconnect
+
 Connect to:
 ```
 ws://127.0.0.1:8000/ws/chat/group_id/
 ```
+And send messages
 
 Send message to group/chat:
 ```
