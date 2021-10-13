@@ -2,9 +2,9 @@ import json
 
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer, JsonWebsocketConsumer, 
-    WebsocketConsumer, AsyncWebsocketConsumer, AsyncConsumer
+    WebsocketConsumer, AsyncWebsocketConsumer
     )
-from channels.consumer import SyncConsumer
+from channels.consumer import SyncConsumer, AsyncConsumer
 from channels.exceptions import StopConsumer
 from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
